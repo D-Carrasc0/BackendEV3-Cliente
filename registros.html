@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ver Registros</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 p-6">
+
+    <!-- Contenedor de título y botón de cerrar sesión -->
+    <div class="flex items-center justify-between mb-6">
+        <!-- Titulo "Lista de Registros" alineado a la izquierda -->
+        <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Lista de Registros</h2>
+
+        <!-- Botón "Cerrar sesión" alineado a la derecha y color rojo -->
+        <button id="logout-btn" 
+            class="w-full sm:w-auto text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800">
+            Cerrar sesión
+        </button>
+    </div>
+
+    <!-- Tabla de Registros -->
+    <div class="relative overflow-x-auto bg-white rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+        <table class="w-full text-sm text-left">
+            <thead class="bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border-b border-gray-300 dark:border-gray-600">
+                <tr>
+                    <th class="px-6 py-3 font-medium">Nombre</th>
+                    <th class="px-6 py-3 font-medium">RUT</th>
+                    <th class="px-6 py-3 font-medium">Motivo</th>
+                    <th class="px-6 py-3 font-medium">Hora Entrada</th>
+                    <th class="px-6 py-3 font-medium">Hora Salida</th>
+                </tr>
+            </thead>
+            <tbody id="registros-list">
+                <!-- Aquí se llenarán los registros -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const registrosList = document.getElementById('registros-list');
+        const logoutButton = document.getElementById('logout-btn');
+
+        const accessToken = localStorage.getItem('access_token');
+
+        if (!accessToken) {
+            alert('No has iniciado sesión. Redirigiendo...');
+            window.location.href = './index.html';
+        }
+
+        // Función para convertir la fecha a formato deseado
+        function formatFecha(fechaString) {
+            if (!fechaString) return "-";
+
+            const fecha = new Date(fechaString);
+            const fechaISO = fecha.toISOString(); // Formato UTC
+
+            const fechaFormateada = fechaISO.replace("T", " ").slice(0, 19); // "2025-10-30 22:01:08"
+            const partes = fechaFormateada.split(" ");
+            const fechaParte = partes[0].split("-"); // [2025, 10, 30]
+            const horaParte = partes[1].split(":");  // [22, 01, 08]
+
+            return `${horaParte[0]}:${horaParte[1]} - ${fechaParte[2]}/${fechaParte[1]}/${fechaParte[0]}`;
+        }
+
+        async function fetchRegistros() {
+            const response = await fetch('https://sistema-de-registro-de-visitas.onrender.com/api/registros/', {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${accessToken}` },
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert("Error: " + (data.detail || "No se pudieron cargar los registros"));
+                return;
+            }
+
+            const registros = data.results;
+            registrosList.innerHTML = '';
+
+            registros.forEach(registro => {
+                const tr = document.createElement('tr');
+                tr.classList.add("border-b", "border-gray-300", "dark:border-gray-600");
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4 text-gray-900 dark:text-white">${registro.nombre}</td>
+                    <td class="px-6 py-4 text-gray-900 dark:text-white">${registro.rut}</td>
+                    <td class="px-6 py-4 text-gray-900 dark:text-white">${registro.motivo}</td>
+                    <td class="px-6 py-4 text-gray-900 dark:text-white">${formatFecha(registro.horaentrada)}</td>
+                    <td class="px-6 py-4 text-gray-900 dark:text-white">${formatFecha(registro.horasalida)}</td>
+                `;
+
+                registrosList.appendChild(tr);
+            });
+        }
+
+        fetchRegistros();
+
+        logoutButton.addEventListener('click', () => {
+            localStorage.removeItem('access_token');
+            window.location.href = './index.html';
+        });
+    </script>
+
+</body>
+</html>

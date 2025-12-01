@@ -106,41 +106,51 @@
 
 <script>
     // Autenticación
+    // Obtiene el token de acceso almacenado en el localstorage
     const accessToken = localStorage.getItem('access_token');
+    // Si no hay token, el usuario no ha iniciado sesion por lo que lo redirige al login
     if (!accessToken) {
         alert('No has iniciado sesión. Redirigiendo...');
         window.location.href = './index.html';
     }
 
+    // Cerrar sesion: elimina el token de localstorage y redirige a login
     document.getElementById('logout-btn').addEventListener('click', () => {
         localStorage.removeItem('access_token');
         window.location.href = './index.html';
     });
 
+    // Hace un scroll "suave" hacia la seccion de la table
     document.getElementById('scroll-registros').addEventListener('click', () => {
         document.getElementById('seccion-registros').scrollIntoView({ behavior: 'smooth' });
     });
 
+
     // Dashboard 
+    // Pide al backend las estadisticas del dashboard
     async function fetchDashboard() {
         const response = await fetch('https://sistema-de-registro-de-visitas.onrender.com/api/dashboard/', {
             method: 'GET',
+            // Envia el token JWT en el header
             headers: { 'Authorization': `Bearer ${accessToken}` }
         });
 
         const data = await response.json();
 
+        // Si la respuesta no fue exitosa muestra uyn error y detiene el flujo
         if (!response.ok) {
             alert("Error al cargar dashboard: " + (data.detail || ""));
             return;
         }
 
         // Métricas
+        // Asigna las metricas a los elemntos correspondientes en la pagina
         document.getElementById('total-visitas').innerText = data.total_visitas;
         document.getElementById('visitas-hoy').innerText = data.visitas_hoy;
         document.getElementById('visitas-activas').innerText = data.visitas_activas;
 
         // Gráfico Visitas por día
+        // Convierte la fecha de "YYYY-MM-DD" a "dd/mm" para el eje x
         const labelsDia = data.visitas_por_dia.map(item => {
             const [year, month, day] = item.dia.split('-');
             return `${day}/${month}`;  // dd/mm

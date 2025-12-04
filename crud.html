@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Registros de Visitas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+
+<div class="flex min-h-screen bg-gray-900 text-white">
+    <!-- SIDEBAR IZQUIERDO -->
+    <aside class="w-64 bg-gray-950 border-r border-gray-800 flex flex-col">
+        <!-- Logo / título -->
+        <div class="px-4 py-4 border-b border-gray-800">
+            <h1 class="text-xl font-bold">Panel de Visitas</h1>
+            <p class="text-xs text-gray-400 mt-1">Gestión de registros</p>
+        </div>
+
+        <!-- Navegación -->
+        <nav class="flex-1 px-2 py-4 space-y-1 text-sm">
+            <!-- Enlace al dashboard de métricas -->
+            <a href="./dashboard.html"
+               class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left
+                      hover:bg-gray-800 hover:text-white text-gray-300">
+                <span>🏠</span>
+                <span>Dashboard</span>
+            </a>
+
+            <!-- Página actual: CRUD de registros -->
+            <button
+                class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left
+                       bg-gray-800 text-white">
+                <span>📋</span>
+                <span>Gestión de registros</span>
+            </button>
+        </nav>
+
+        <!-- Pie del sidebar (cerrar sesión) -->
+        <div class="px-4 py-4 border-t border-gray-800">
+            <button id="logout-btn"
+                    class="w-full flex items-center justify-center px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-sm font-medium">
+                Cerrar sesión
+            </button>
+        </div>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="flex-1 px-4 py-6 md:px-8">
+        <div class="max-w-6xl mx-auto space-y-6">
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                    <h2 class="text-3xl font-bold">Gestión de registros de visitas</h2>
+                    <p class="text-sm text-gray-400 mt-1">
+                        Aquí puedes crear, editar y eliminar visitas.
+                    </p>
+                </div>
+                <div class="flex gap-2">
+                    <!-- Botón para volver al dashboard -->
+                    <a href="./dashboard.html"
+                       class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg bg-gray-700 hover:bg-gray-600">
+                        Volver al Dashboard
+                    </a>
+                    <button id="btn-nuevo-registro"
+                            class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg bg-emerald-600 hover:bg-emerald-700">
+                        + Nuevo registro
+                    </button>
+                </div>
+            </div>
+
+            <!-- Buscador global + entries per page -->
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="relative w-full sm:max-w-xs">
+                    <input id="search-global" type="text"
+                           class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                           placeholder="Buscar por nombre, RUT o motivo...">
+                </div>
+
+                <div class="flex items-center gap-2 text-sm text-gray-300">
+                    <span>Mostrar</span>
+                    <select id="page-size"
+                            class="rounded-lg border border-gray-700 bg-gray-800 px-2 py-1 text-sm text-gray-100">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select>
+                    <span>registros</span>
+                </div>
+            </div>
+
+            <!-- TABLA DE REGISTROS -->
+            <section id="seccion-registros" class="space-y-4">
+                <div class="relative overflow-x-auto bg-gray-800 rounded-lg shadow border border-gray-700">
+                    <table class="w-full text-sm text-left border-separate border-spacing-0">
+                        <thead class="bg-gray-800 text-gray-300">
+                        <!-- Encabezados con orden -->
+                        <tr class="border-b border-gray-700 text-xs uppercase tracking-wide">
+                            <th data-sort="nombre" class="px-6 py-3 font-semibold cursor-pointer select-none">
+                                <div class="flex items-center gap-1">
+                                    <span>Nombre</span>
+                                    <span class="flex flex-col leading-none text-[9px]" data-sort-icons>
+                                        <span data-arrow="up">▲</span>
+                                        <span data-arrow="down">▼</span>
+                                    </span>
+                                </div>
+                            </th>
+                            <th data-sort="rut" class="px-6 py-3 font-semibold cursor-pointer select-none">
+                                <div class="flex items-center gap-1">
+                                    <span>RUT</span>
+                                    <span class="flex flex-col leading-none text-[9px]" data-sort-icons>
+                                        <span data-arrow="up">▲</span>
+                                        <span data-arrow="down">▼</span>
+                                    </span>
+                                </div>
+                            </th>
+                            <th data-sort="motivo" class="px-6 py-3 font-semibold cursor-pointer select-none">
+                                <div class="flex items-center gap-1">
+                                    <span>Motivo</span>
+                                    <span class="flex flex-col leading-none text-[9px]" data-sort-icons>
+                                        <span data-arrow="up">▲</span>
+                                        <span data-arrow="down">▼</span>
+                                    </span>
+                                </div>
+                            </th>
+                            <th data-sort="horaentrada" class="px-6 py-3 font-semibold cursor-pointer select-none">
+                                <div class="flex items-center gap-1">
+                                    <span>Hora Entrada</span>
+                                    <span class="flex flex-col leading-none text-[9px]" data-sort-icons>
+                                        <span data-arrow="up">▲</span>
+                                        <span data-arrow="down">▼</span>
+                                    </span>
+                                </div>
+                            </th>
+                            <th data-sort="horasalida" class="px-6 py-3 font-semibold cursor-pointer select-none">
+                                <div class="flex items-center gap-1">
+                                    <span>Hora Salida</span>
+                                    <span class="flex flex-col leading-none text-[9px]" data-sort-icons>
+                                        <span data-arrow="up">▲</span>
+                                        <span data-arrow="down">▼</span>
+                                    </span>
+                                </div>
+                            </th>
+                            <th data-sort="estado" class="px-6 py-3 font-semibold cursor-pointer select-none">
+                                <div class="flex items-center gap-1">
+                                    <span>Estado</span>
+                                    <span class="flex flex-col leading-none text-[9px]" data-sort-icons>
+                                        <span data-arrow="up">▲</span>
+                                        <span data-arrow="down">▼</span>
+                                    </span>
+                                </div>
+                            </th>
+                            <th class="px-6 py-3 font-semibold">
+                                Acciones
+                            </th>
+                        </tr>
+
+                        <!-- Fila de filtros por columna -->
+                        <tr class="border-b border-gray-700 text-xs">
+                            <th class="px-6 py-2">
+                                <input id="filter-nombre" type="text"
+                                       class="w-full rounded-md border border-gray-700 bg-gray-900/60 px-2 py-1 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                       placeholder="Filtrar nombre">
+                            </th>
+                            <th class="px-6 py-2">
+                                <input id="filter-rut" type="text"
+                                       class="w-full rounded-md border border-gray-700 bg-gray-900/60 px-2 py-1 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                       placeholder="Filtrar RUT">
+                            </th>
+                            <th class="px-6 py-2">
+                                <input id="filter-motivo" type="text"
+                                       class="w-full rounded-md border border-gray-700 bg-gray-900/60 px-2 py-1 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                       placeholder="Filtrar motivo">
+                            </th>
+                            <th class="px-6 py-2"></th>
+                            <th class="px-6 py-2"></th>
+                            <th class="px-6 py-2">
+                                <select id="filter-estado"
+                                        class="w-full rounded-md border border-gray-700 bg-gray-900/60 px-2 py-1 text-xs text-gray-100">
+                                    <option value="">Todos</option>
+                                    <option value="finalizado">Finalizado</option>
+                                    <option value="incompleto">Incompleto</option>
+                                </select>
+                            </th>
+                            <th class="px-6 py-2"></th>
+                        </tr>
+                        </thead>
+
+                        <tbody id="registros-list" class="divide-y divide-gray-700">
+                        <!-- filas generadas por JS -->
+                        </tbody>
+                    </table>
+
+                    <!-- Paginación -->
+                    <div class="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between text-xs text-gray-400">
+                        <div>
+                            Mostrando
+                            <span id="page-start">0</span> -
+                            <span id="page-end">0</span>
+                            de
+                            <span id="page-total">0</span>
+                            registros
+                        </div>
+                        <div class="inline-flex overflow-hidden rounded-md border border-gray-700">
+                            <button id="prev-page"
+                                    class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 transition disabled:opacity-40 disabled:cursor-not-allowed">
+                                Anterior
+                            </button>
+                            <button id="next-page"
+                                    class="border-l border-gray-700 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 transition disabled:opacity-40 disabled:cursor-not-allowed">
+                                Siguiente
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+</div>
+
+<!-- SIDEBAR / SLIDE-OVER PARA CREAR/EDITAR REGISTRO -->
+<div id="sidebar-registro"
+     class="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-gray-900 border-l border-gray-700 transform translate-x-full transition-transform duration-300">
+    <!-- Cabecera -->
+    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+        <h3 id="sidebar-title" class="text-lg font-semibold">Nuevo registro</h3>
+        <button id="sidebar-close" class="text-gray-400 hover:text-gray-200 text-xl">&times;</button>
+    </div>
+
+    <!-- Formulario -->
+    <form id="form-registro" class="p-4 space-y-4">
+        <input type="hidden" id="registro-id">
+
+        <div>
+            <label class="block text-sm mb-1">Nombre</label>
+            <input id="registro-nombre" type="text"
+                   class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm"
+                   required>
+        </div>
+
+        <div>
+            <label class="block text-sm mb-1">RUT</label>
+            <input id="registro-rut" type="text"
+                   class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm"
+                   placeholder="12345678-9"
+                   pattern="^[1-9][0-9]{6,7}-[0-9Kk]$"
+                   title="Formato: 12345678-9"
+                   required>
+        </div>
+
+        <div>
+            <label class="block text-sm mb-1">Motivo</label>
+            <textarea id="registro-motivo" rows="3"
+                      class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm"
+                      required></textarea>
+        </div>
+
+        <div>
+            <label class="block text-sm mb-1">Hora entrada</label>
+            <input id="registro-horaentrada" type="datetime-local"
+                   class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm"
+                   required>
+        </div>
+
+        <div>
+            <label class="block text-sm mb-1">Hora salida (opcional)</label>
+            <input id="registro-horasalida" type="datetime-local"
+                   class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm">
+        </div>
+
+        <div class="flex items-center gap-2">
+            <input id="registro-estado" type="checkbox"
+                   class="rounded border-gray-700 bg-gray-800">
+            <label for="registro-estado" class="text-sm">¿Finalizado?</label>
+        </div>
+
+        <div class="flex justify-between pt-2">
+            <button type="button" id="btn-eliminar-registro"
+                    class="hidden text-sm text-red-400 hover:text-red-300">
+                Eliminar registro
+            </button>
+
+            <div class="ml-auto flex gap-2">
+                <button type="button" id="btn-cancelar-sidebar"
+                        class="px-3 py-1.5 text-sm rounded-lg border border-gray-600">
+                    Cancelar
+                </button>
+                <button type="submit"
+                        class="px-4 py-1.5 text-sm rounded-lg bg-indigo-600 hover:bg-indigo-700">
+                    Guardar
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script src="./js/crud.js"></script>
+</body>
+</html>

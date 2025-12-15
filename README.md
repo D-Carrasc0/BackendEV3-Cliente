@@ -12,20 +12,20 @@ Las tecnologias utilzadas para este proyecto son: HTML, CSS (Tailwind) y JS.
 
 ## Dashboard
 Contiene las metricas, graficos y la tabla de registro
-![image alt]()
+![image alt](https://github.com/D-Carrasc0/BackendEV3-Cliente/blob/642f2307d9f7f27224ed95866621a76f347deacc/images/Dashboard.png)
 
 ## Lista de los registros
 Tabla de registro que contiene las visitas donde se puede ordenar por cada campo, ademas
 de filtrar por nombre, rut, motivo y estado.
-![image alt]()
+![image alt](https://github.com/D-Carrasc0/BackendEV3-Cliente/blob/642f2307d9f7f27224ed95866621a76f347deacc/images/Lista%20de%20registro.png)
 
 ## Gestion de los registros
 Aqui es donde se puede hacer el CRUD a los registros
 **Listado de registros**
-![image alt]()
+![image alt](https://github.com/D-Carrasc0/BackendEV3-Cliente/blob/642f2307d9f7f27224ed95866621a76f347deacc/images/gestion.png)
 **Crear registro**
-![image alt]()
+![image alt](https://github.com/D-Carrasc0/BackendEV3-Cliente/blob/642f2307d9f7f27224ed95866621a76f347deacc/images/gestion%20crear.png)
 **Editar registro**
-![image alt]()
+![image alt](https://github.com/D-Carrasc0/BackendEV3-Cliente/blob/642f2307d9f7f27224ed95866621a76f347deacc/images/gestion%20editar.png)
 **Eliminar registro**
-![image alt]()
+![image alt](https://github.com/D-Carrasc0/BackendEV3-Cliente/blob/642f2307d9f7f27224ed95866621a76f347deacc/images/gestion%20eliminar.png)

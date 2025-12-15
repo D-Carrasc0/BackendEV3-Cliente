@@ -1,10 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // ===== CONFIGURACIÓN BASE =====
-    const API_BASE = 'https://sistema-de-registro-de-visitas.onrender.com';  // cámbialo por tu dominio en producción
+    // ===== Configuracion base: rutas de la API =====
+    const API_BASE = 'https://sistema-de-registro-de-visitas.onrender.com';
     const REGISTROS_URL = `${API_BASE}/api/registros/`;
     const DASHBOARD_URL = `${API_BASE}/api/dashboard/`;
 
-    // ===== AUTENTICACIÓN =====
+    // ===== Autenticacion =====
     const accessToken = localStorage.getItem('access_token');
     if (!accessToken) {
         alert('No has iniciado sesión. Redirigiendo...');
@@ -12,113 +12,138 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    // Manejo centralizado cuando el token es inválido / ha expirado
+    function handleAuthError() {
+        alert('Tu sesión ha expirado o el token no es válido. Por favor, inicia sesión nuevamente.');
+        localStorage.removeItem('access_token');
+        window.location.href = './index.html';
+    }
+
+    // Botón cerrar sesión
     document.getElementById('logout-btn').addEventListener('click', () => {
         localStorage.removeItem('access_token');
         window.location.href = './index.html';
     });
 
+    // Botón "Ver registros" hace scroll a la tabla
     document.getElementById('scroll-registros').addEventListener('click', () => {
         document.getElementById('seccion-registros').scrollIntoView({ behavior: 'smooth' });
     });
 
-    // ===== DASHBOARD (métricas y gráficos) =====
+    // ===== Dashboard (métricas y gráficos) =====
     async function fetchDashboard() {
-        const response = await fetch(DASHBOARD_URL, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            alert("Error al cargar dashboard: " + (data.detail || ""));
-            return;
-        }
-
-        // Métricas
-        document.getElementById('total-visitas').innerText = data.total_visitas;
-        document.getElementById('visitas-hoy').innerText = data.visitas_hoy;
-        document.getElementById('visitas-activas').innerText = data.visitas_activas;
-
-        // Visitas por día
-        if (Array.isArray(data.visitas_por_dia)) {
-            const labelsDia = data.visitas_por_dia.map(item => {
-                const [year, month, day] = item.dia.split('-');
-                return `${day}/${month}`;
+        try {
+            const response = await fetch(DASHBOARD_URL, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${accessToken}` }
             });
-            const valoresDia = data.visitas_por_dia.map(item => item.total);
 
-            const opcionesVisitasDia = {
+            const data = await response.json();
+
+            // Si la API responde error, revisar si es tema de autenticación
+            if (!response.ok) {
+                if (
+                    response.status === 401 ||
+                    response.status === 403 ||
+                    data.code === 'token_not_valid'
+                ) {
+                    handleAuthError();
+                    return;
+                }
+
+                alert("Error al cargar dashboard: " + (data.detail || ""));
+                return;
+            }
+
+            // Métricas numéricas
+            document.getElementById('total-visitas').innerText = data.total_visitas;
+            document.getElementById('visitas-hoy').innerText = data.visitas_hoy;
+            document.getElementById('visitas-activas').innerText = data.visitas_activas;
+
+            // Gráfico: visitas por día
+            if (Array.isArray(data.visitas_por_dia)) {
+                const labelsDia = data.visitas_por_dia.map(item => {
+                    const [year, month, day] = item.dia.split('-');
+                    return `${day}/${month}`;
+                });
+                const valoresDia = data.visitas_por_dia.map(item => item.total);
+
+                const opcionesVisitasDia = {
+                    chart: {
+                        type: 'bar',
+                        height: 260,
+                        toolbar: { show: false },
+                        foreColor: '#9CA3AF',
+                        background: 'transparent',
+                    },
+                    series: [{ name: 'Visitas', data: valoresDia }],
+                    xaxis: {
+                        categories: labelsDia,
+                        axisBorder: { show: false },
+                        axisTicks: { show: false },
+                    },
+                    yaxis: {
+                        labels: { formatter: val => val.toFixed(0) }
+                    },
+                    grid: {
+                        borderColor: '#374151',
+                        strokeDashArray: 4,
+                    },
+                    colors: ['#6366F1'],
+                    dataLabels: { enabled: false },
+                    plotOptions: {
+                        bar: { borderRadius: 4, columnWidth: '45%' }
+                    }
+                };
+
+                new ApexCharts(
+                    document.querySelector("#visitasPorDiaChart"),
+                    opcionesVisitasDia
+                ).render();
+            }
+
+            // Gráfico: estado de visitas (finalizadas vs incompletas)
+            const finalizadas = data.estados?.finalizadas || 0;
+            const incompletas = data.estados?.incompletas || 0;
+
+            const opcionesEstado = {
                 chart: {
-                    type: 'bar',
+                    type: 'donut',
                     height: 260,
                     toolbar: { show: false },
                     foreColor: '#9CA3AF',
                     background: 'transparent',
                 },
-                series: [{ name: 'Visitas', data: valoresDia }],
-                xaxis: {
-                    categories: labelsDia,
-                    axisBorder: { show: false },
-                    axisTicks: { show: false },
+                series: [finalizadas, incompletas],
+                labels: ['Finalizadas', 'Incompletas'],
+                colors: ['#22C55E', '#EF4444'],
+                legend: {
+                    position: 'bottom',
+                    labels: { colors: '#E5E7EB' }
                 },
-                yaxis: {
-                    labels: { formatter: val => val.toFixed(0) }
-                },
-                grid: {
-                    borderColor: '#374151',
-                    strokeDashArray: 4,
-                },
-                colors: ['#6366F1'],
-                dataLabels: { enabled: false },
-                plotOptions: {
-                    bar: { borderRadius: 4, columnWidth: '45%' }
+                dataLabels: {
+                    formatter: (val, opts) => {
+                        const valor = opts.w.globals.series[opts.seriesIndex];
+                        return `${valor} (${val.toFixed(1)}%)`;
+                    }
                 }
             };
 
             new ApexCharts(
-                document.querySelector("#visitasPorDiaChart"),
-                opcionesVisitasDia
+                document.querySelector("#estadoVisitasChart"),
+                opcionesEstado
             ).render();
+        } catch (error) {
+            // Errores de red o excepciones en fetch
+            console.error(error);
+            alert("Error de red al cargar el dashboard.");
         }
-
-        // Estado de visitas
-        const finalizadas = data.estados?.finalizadas || 0;
-        const incompletas = data.estados?.incompletas || 0;
-
-        const opcionesEstado = {
-            chart: {
-                type: 'donut',
-                height: 260,
-                toolbar: { show: false },
-                foreColor: '#9CA3AF',
-                background: 'transparent',
-            },
-            series: [finalizadas, incompletas],
-            labels: ['Finalizadas', 'Incompletas'],
-            colors: ['#22C55E', '#EF4444'],
-            legend: {
-                position: 'bottom',
-                labels: { colors: '#E5E7EB' }
-            },
-            dataLabels: {
-                formatter: (val, opts) => {
-                    const valor = opts.w.globals.series[opts.seriesIndex];
-                    return `${valor} (${val.toFixed(1)}%)`;
-                }
-            }
-        };
-
-        new ApexCharts(
-            document.querySelector("#estadoVisitasChart"),
-            opcionesEstado
-        ).render();
     }
 
     // ===== TABLA DE REGISTROS =====
     const registrosList = document.getElementById('registros-list');
 
-    // Filtros
+    // Filtros de búsqueda
     const searchGlobal = document.getElementById('search-global');
     const filtroNombre = document.getElementById('filter-nombre');
     const filtroRut = document.getElementById('filter-rut');
@@ -136,15 +161,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Orden por encabezado
     const sortHeaders = document.querySelectorAll('th[data-sort]');
 
-    let registrosOriginales = [];
-    let registrosProcesados = [];
+    let registrosOriginales = [];   // datos crudos desde la API
+    let registrosProcesados = [];   // datos tras filtros + orden
     let currentPage = 1;
     let pageSize = parseInt(pageSizeSelect.value, 10) || 10;
 
-    // Orden inicial: horaentrada desc
+    // Orden inicial: horaentrada descendente
     let sortField = 'horaentrada';
     let sortDirection = 'desc';
 
+    // Formatea un string de fecha ISO a "HH:MM - DD/MM/YYYY"
     function formatFecha(fechaString) {
         if (!fechaString) return "-";
         const fecha = new Date(fechaString);
@@ -157,10 +183,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${hora}:${minuto} - ${dia}/${mes}/${año}`;
     }
 
+    // Convierte un string de fecha a milisegundos (para ordenar)
     function timeFromString(str) {
         return str ? new Date(str).getTime() : 0;
     }
 
+    // Comparador usado para ordenar la lista en memoria
     function compararRegistros(a, b) {
         let comp = 0;
 
@@ -192,6 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return sortDirection === 'asc' ? comp : -comp;
     }
 
+    // Aplica filtros y orden sobre registrosOriginales
     function getRegistrosFiltradosYOrdenados() {
         if (!registrosOriginales.length) return [];
 
@@ -206,13 +235,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const rut = (registro.rut || '').toLowerCase();
             const motivo = (registro.motivo || '').toLowerCase();
 
+            // Búsqueda global
             if (search && !(nombre.includes(search) || rut.includes(search) || motivo.includes(search))) {
                 return false;
             }
+            // Filtros por columna
             if (fNombre && !nombre.includes(fNombre)) return false;
             if (fRut && !rut.includes(fRut)) return false;
             if (fMotivo && !motivo.includes(fMotivo)) return false;
 
+            // Filtro por estado
             if (fEstado === 'finalizado' && !registro.estado_finalizado) return false;
             if (fEstado === 'incompleto' && registro.estado_finalizado) return false;
 
@@ -223,6 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return lista;
     }
 
+    // Renderiza filas de la tabla
     function renderRegistros(lista) {
         registrosList.innerHTML = '';
 
@@ -275,6 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Calcula qué registros mostrar según la página actual
     function renderPaginaActual() {
         const total = registrosProcesados.length;
         const maxPage = Math.ceil(total / pageSize) || 1;
@@ -294,12 +328,14 @@ document.addEventListener('DOMContentLoaded', () => {
         nextPageBtn.disabled = currentPage >= maxPage;
     }
 
+    // Recalcula lista filtrada + ordenada y reinicia paginación
     function actualizarYRender() {
         registrosProcesados = getRegistrosFiltradosYOrdenados();
         currentPage = 1;
         renderPaginaActual();
     }
 
+    // Actualiza los íconos de orden en los encabezados
     function actualizarIconosOrden() {
         sortHeaders.forEach(th => {
             const field = th.dataset.sort;
@@ -327,6 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Click en encabezados para ordenar
     sortHeaders.forEach(th => {
         th.addEventListener('click', () => {
             const field = th.dataset.sort;
@@ -343,17 +380,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Filtros de texto instantáneos
     [searchGlobal, filtroNombre, filtroRut, filtroMotivo].forEach(input => {
         input.addEventListener('input', actualizarYRender);
     });
     filtroEstado.addEventListener('change', actualizarYRender);
 
+    // Cambio de tamaño de página
     pageSizeSelect.addEventListener('change', () => {
         pageSize = parseInt(pageSizeSelect.value, 10) || 10;
         currentPage = 1;
         renderPaginaActual();
     });
 
+    // Botones de paginación
     prevPageBtn.addEventListener('click', () => {
         if (currentPage > 1) {
             currentPage--;
@@ -372,44 +412,58 @@ document.addEventListener('DOMContentLoaded', () => {
 
     actualizarIconosOrden();
 
-    // ===== FETCH DE REGISTROS (TODAS LAS PÁGINAS) =====
+    // ===== Fetch de registros (soporta paginación DRF) =====
     async function fetchRegistros(url) {
         if (!url) {
             registrosOriginales = [];
             url = REGISTROS_URL;
         }
 
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
 
-        const data = await response.json();
+            const data = await response.json();
 
-        if (!response.ok) {
-            alert("Error al cargar registros: " + (data.detail || ""));
-            return;
-        }
+            if (!response.ok) {
+                if (
+                    response.status === 401 ||
+                    response.status === 403 ||
+                    data.code === 'token_not_valid'
+                ) {
+                    handleAuthError();
+                    return;
+                }
 
-        // Caso 1: lista simple
-        if (Array.isArray(data)) {
-            registrosOriginales = data;
-            actualizarYRender();
-            return;
-        }
+                alert("Error al cargar registros: " + (data.detail || ""));
+                return;
+            }
 
-        // Caso 2: paginación DRF
-        const pageResults = data.results || [];
-        registrosOriginales = registrosOriginales.concat(pageResults);
+            // Caso 1: la API devuelve lista simple
+            if (Array.isArray(data)) {
+                registrosOriginales = data;
+                actualizarYRender();
+                return;
+            }
 
-        if (data.next) {
-            await fetchRegistros(data.next);
-        } else {
-            actualizarYRender();
+            // Caso 2: paginación DRF
+            const pageResults = data.results || [];
+            registrosOriginales = registrosOriginales.concat(pageResults);
+
+            if (data.next) {
+                await fetchRegistros(data.next);
+            } else {
+                actualizarYRender();
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Error de red al cargar registros.");
         }
     }
 
-    // ===== INICIALIZACIÓN =====
+    // ===== Inicializacion del dashboard =====
     fetchDashboard();
     fetchRegistros();
 });

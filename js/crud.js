@@ -1,9 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // ===== CONFIGURACIÓN BASE =====
-    const API_BASE = 'https://sistema-de-registro-de-visitas.onrender.com';  // cámbialo por tu dominio en producción
+    // ===== Configuracion base: rutas de la API =====
+    const API_BASE = 'https://sistema-de-registro-de-visitas.onrender.com';
     const REGISTROS_URL = `${API_BASE}/api/registros/`;
 
-    // ===== AUTENTICACIÓN =====
+    // ===== Autenticacion =====
     const accessToken = localStorage.getItem('access_token');
     if (!accessToken) {
         alert('No has iniciado sesión. Redirigiendo...');
@@ -11,6 +11,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    // Manejo centralizado cuando el token es inválido / ha expirado
+    function handleAuthError() {
+        alert('Tu sesión ha expirado o el token no es válido. Por favor, inicia sesión nuevamente.');
+        localStorage.removeItem('access_token');
+        window.location.href = './index.html';
+    }
+
+    // Botón cerrar sesión (solo si existe en esta página)
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
@@ -19,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ===== ELEMENTOS TABLA =====
+    // ===== Elementos de la tabla =====
     const registrosList = document.getElementById('registros-list');
 
     // Filtros
@@ -45,11 +53,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentPage = 1;
     let pageSize = parseInt(pageSizeSelect.value, 10) || 10;
 
-    // Orden inicial: horaentrada desc
+    // Orden inicial: horaentrada descendente
     let sortField = 'horaentrada';
     let sortDirection = 'desc';
 
-    // ===== SIDEBAR: REFERENCIAS =====
+    // ===== Barra lateral: referencias a elementos =====
     const sidebar = document.getElementById('sidebar-registro');
     const btnNuevoRegistro = document.getElementById('btn-nuevo-registro');
     const sidebarClose = document.getElementById('sidebar-close');
@@ -57,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const formRegistro = document.getElementById('form-registro');
     const btnEliminarRegistro = document.getElementById('btn-eliminar-registro');
 
-    // OJO: este input oculto ahora guardará la URL del registro (no el id numérico)
+    // Input oculto: almacena la URL completa del recurso (no solo el id)
     const inputId = document.getElementById('registro-id');
     const inputNombre = document.getElementById('registro-nombre');
     const inputRut = document.getElementById('registro-rut');
@@ -67,11 +75,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputEstado = document.getElementById('registro-estado');
     const sidebarTitle = document.getElementById('sidebar-title');
 
+    // Abre el sidebar en modo "crear" o "editar"
     function abrirSidebar(modo, registro = null) {
         formRegistro.dataset.modo = modo; // "crear" | "editar"
         if (modo === 'crear') {
             sidebarTitle.textContent = 'Nuevo registro';
-            inputId.value = ''; // sin URL
+            inputId.value = '';
             inputNombre.value = '';
             inputRut.value = '';
             inputMotivo.value = '';
@@ -81,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnEliminarRegistro.classList.add('hidden');
         } else if (modo === 'editar' && registro) {
             sidebarTitle.textContent = 'Editar registro';
-            inputId.value = registro.url || '';  // guardamos la URL del recurso
+            inputId.value = registro.url || '';
             inputNombre.value = registro.nombre || '';
             inputRut.value = registro.rut || '';
             inputMotivo.value = registro.motivo || '';
@@ -105,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sidebarClose) sidebarClose.addEventListener('click', cerrarSidebar);
     if (btnCancelarSidebar) btnCancelarSidebar.addEventListener('click', cerrarSidebar);
 
-    // ===== VALIDACIÓN CLIENTE RUT (mensaje más claro) =====
+    // ===== Validacion del rut del visitante =====
     if (inputRut) {
         inputRut.addEventListener('invalid', function () {
             if (this.validity.patternMismatch) {
@@ -122,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ===== FORMATOS Y ORDEN =====
+    // ===== Formatos y orden =====
     function formatFecha(fechaString) {
         if (!fechaString) return "-";
         const fecha = new Date(fechaString);
@@ -184,13 +193,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const rut = (registro.rut || '').toLowerCase();
             const motivo = (registro.motivo || '').toLowerCase();
 
+            // Búsqueda global
             if (search && !(nombre.includes(search) || rut.includes(search) || motivo.includes(search))) {
                 return false;
             }
+            // Filtros por columna
             if (fNombre && !nombre.includes(fNombre)) return false;
             if (fRut && !rut.includes(fRut)) return false;
             if (fMotivo && !motivo.includes(fMotivo)) return false;
 
+            // Filtro por estado
             if (fEstado === 'finalizado' && !registro.estado_finalizado) return false;
             if (fEstado === 'incompleto' && registro.estado_finalizado) return false;
 
@@ -226,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 : 'bg-yellow-500/10 text-yellow-400 ring-1 ring-yellow-500/30';
             const puntoClase = estadoFinalizado ? 'bg-green-400' : 'bg-yellow-400';
 
-            // IMPORTANTE: usamos registro.url como identificador
+            // Usamos registro.url como identificador para editar/eliminar
             tr.innerHTML = `
                 <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-100">
                     ${registro.nombre || '-'}
@@ -367,7 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const btnDel = e.target.closest('[data-action="eliminar-registro"]');
 
         if (btnEdit) {
-            const url = btnEdit.dataset.url;  // URL del recurso
+            const url = btnEdit.dataset.url;
             const reg = registrosOriginales.find(r => r.url === url);
             if (reg) abrirSidebar('editar', reg);
         } else if (btnDel) {
@@ -378,11 +390,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Enviar formulario (crear / editar)
+    // Envío del formulario (crear / editar)
     formRegistro.addEventListener('submit', async (e) => {
         e.preventDefault();
         const modo = formRegistro.dataset.modo || 'crear';
-        const recursoUrl = inputId.value; // puede estar vacío (crear) o ser la URL del recurso (editar)
+        const recursoUrl = inputId.value;
 
         const payload = {
             nombre: inputNombre.value,
@@ -395,29 +407,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let url = REGISTROS_URL;
         let method = 'POST';
-        // Si está en modo editar, usamos la URL del recurso que guardamos en el hidden
         if (modo === 'editar' && recursoUrl) {
             url = recursoUrl;
             method = 'PUT';
         }
 
-        const resp = await fetch(url, {
-            method,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify(payload),
-        });
+        try {
+            const resp = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify(payload),
+            });
 
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok) {
-            alert('Error al guardar registro: ' + JSON.stringify(data));
-            return;
+            const data = await resp.json().catch(() => ({}));
+
+            if (!resp.ok) {
+                if (
+                    resp.status === 401 ||
+                    resp.status === 403 ||
+                    data.code === 'token_not_valid'
+                ) {
+                    handleAuthError();
+                    return;
+                }
+
+                alert('Error al guardar registro: ' + JSON.stringify(data));
+                return;
+            }
+
+            cerrarSidebar();
+            await fetchRegistros();
+        } catch (error) {
+            console.error(error);
+            alert('Error de red al guardar el registro.');
         }
-
-        cerrarSidebar();
-        await fetchRegistros();
     });
 
     // Botón eliminar dentro del sidebar
@@ -429,51 +455,83 @@ document.addEventListener('DOMContentLoaded', () => {
         cerrarSidebar();
     });
 
+    // Elimina un registro usando su URL de recurso
     async function eliminarRegistro(urlRecurso) {
-        const resp = await fetch(urlRecurso, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-        if (!resp.ok) {
+        try {
+            const resp = await fetch(urlRecurso, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+
             const data = await resp.json().catch(() => ({}));
-            alert('Error al eliminar registro: ' + JSON.stringify(data));
-            return;
+
+            if (!resp.ok) {
+                if (
+                    resp.status === 401 ||
+                    resp.status === 403 ||
+                    data.code === 'token_not_valid'
+                ) {
+                    handleAuthError();
+                    return;
+                }
+
+                alert('Error al eliminar registro: ' + JSON.stringify(data));
+                return;
+            }
+
+            await fetchRegistros();
+        } catch (error) {
+            console.error(error);
+            alert('Error de red al eliminar el registro.');
         }
-        await fetchRegistros();
     }
 
-    // ===== FETCH DE REGISTROS (TODAS LAS PÁGINAS) =====
+    // ===== FETCH DE REGISTROS (todas las páginas) =====
     async function fetchRegistros(url) {
         if (!url) {
             registrosOriginales = [];
             url = REGISTROS_URL;
         }
 
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
 
-        const data = await response.json();
+            const data = await response.json();
 
-        if (!response.ok) {
-            alert("Error al cargar registros: " + (data.detail || ""));
-            return;
-        }
+            if (!response.ok) {
+                if (
+                    response.status === 401 ||
+                    response.status === 403 ||
+                    data.code === 'token_not_valid'
+                ) {
+                    handleAuthError();
+                    return;
+                }
 
-        // Paginación DRF
-        const pageResults = data.results || data; // por si alguna vez no hay paginación
-        if (Array.isArray(pageResults)) {
-            registrosOriginales = registrosOriginales.concat(pageResults);
-        }
+                alert("Error al cargar registros: " + (data.detail || ""));
+                return;
+            }
 
-        if (data.next) {
-            await fetchRegistros(data.next);
-        } else {
-            actualizarYRender();
+            // Soporta API con o sin paginación DRF
+            const pageResults = data.results || data;
+            if (Array.isArray(pageResults)) {
+                registrosOriginales = registrosOriginales.concat(pageResults);
+            }
+
+            if (data.next) {
+                await fetchRegistros(data.next);
+            } else {
+                actualizarYRender();
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Error de red al cargar registros.");
         }
     }
 
-    // ===== INICIALIZACIÓN =====
+    // ===== Inicializacion =====
     fetchRegistros();
 });
